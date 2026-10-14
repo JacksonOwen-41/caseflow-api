@@ -2,28 +2,32 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Connect(databaseURL string) (*pgxpool.Pool, error) {
+func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	if databaseURL == "" {
+		return nil, errors.New("DATABASE_URL is required")
+	}
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse database config: %w", err)
+		return nil, fmt.Errorf("parse database config: %w", err)
 	}
 
 	config.MaxConns = 10
 	config.MinConns = 2
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create data pool: %w", err)
+		return nil, fmt.Errorf("create database pool: %w", err)
 	}
 
-	if err := pool.Ping(context.Background()); err != nil {
+	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("failed to ping: %w", err)
+		return nil, fmt.Errorf("ping database: %w", err)
 	}
 
 	return pool, nil
